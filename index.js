@@ -22,6 +22,26 @@ const client = new MongoClient(uri, {
   },
 });
 
+const verifyJWT = (req, res, next) => {
+  console.log(req.headers.authorization);
+  const authorization = req.headers.authorization;
+  if (!authorization) {
+    return res
+      .status(401)
+      .send({ error: true, message: "unauthorized access" });
+  }
+  const token = authorization.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (error, decoded) => {
+    if (error) {
+      return res
+        .status(403)
+        .send({ error: true, message: "unauthorized access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+};
+
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
@@ -67,10 +87,18 @@ async function run() {
     });
 
     // get booking with query
-    app.get("/bookings", async (req, res) => {
+    app.get("/bookings", verifyJWT, async (req, res) => {
       // we're getting this query email from server url which look  like this:
       // http://localhost:5000/bookings?email=sobujahmed124@gmail.com
       // console.log(req.query.email);
+      // console.log(req.headers.authorization);
+      const decoded = req.decoded;
+      console.log("decoded at", decoded);
+      // output looks like this: decoded at { email: 'sobujahmed124@gmail.com', iat: 1690472147, exp: 1690475747 }
+
+      if (decoded.email !== req.query.email) {
+        return res.status(403).send({ error: 1, message: "invalid token" });
+      }
       let query = {};
       if (req.query?.email) {
         query = { email: req.query.email };
