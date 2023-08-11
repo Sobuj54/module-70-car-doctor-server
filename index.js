@@ -45,7 +45,7 @@ const verifyJWT = (req, res, next) => {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-     client.connect();
+    client.connect();
 
     const serviceCollection = client.db("carDoctor").collection("services");
     const bookingCollection = client.db("carDoctor").collection("bookings");
@@ -62,8 +62,17 @@ async function run() {
 
     // get services from database
     app.get("/services", async (req, res) => {
-      const cursor = serviceCollection.find();
-      const result = await cursor.toArray();
+      const sort = req.query.sort;
+      const search = req.query.search;
+      // mongodb regex for searching something in database
+      const query = { title: { $regex: search, $options: "i" } };
+      // using mongodb operator for comparison
+      // const query = { price: { $lte: 150 } };
+      const options = {
+        // sort returned documents in ascending order
+        sort: { price: sort },
+      };
+      const result = await serviceCollection.find(query, options).toArray();
       res.send(result);
     });
 
